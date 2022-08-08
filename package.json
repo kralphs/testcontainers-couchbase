@@ -18,7 +18,7 @@
   },
   "type": "module",
   "author": "Kevin Ralphs <kevin.b.c.ralphs@gmail.com> (https://github.com/kralphs)",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "axios": "^0.27.2",
     "axios-retry": "^3.3.1",
