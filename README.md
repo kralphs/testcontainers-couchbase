@@ -24,7 +24,7 @@ Look at the [test](src/couchbase-container.test.ts) for examples.
 Get new single node Couchbase cluster. Defaults to image 'couchbase/server', but can be configured by passing an image name.
 
 ```typescript
-import { CouchbaseContainer } from 'testcontainers-couchbase';
+import { CouchbaseContainer } from '@kralphs/testcontainers-couchbase';
 
 const imageName = 'another/couchbase/server/image';
 
@@ -38,7 +38,7 @@ Cluster configuration can be done in a declarative fashion. By default, `fromCou
 The YAML semantics attempt to tightly follow the public API for this module. See [here](./CouchbaseFile) for an example.
 
 ```typescript
-import { CouchbaseContainer } from 'testcontainers-couchbase';
+import { CouchbaseContainer } from '@kralphs/testcontainers-couchbase';
 
 const imageName = 'another/couchbase/server/image';
 
@@ -54,7 +54,10 @@ Continue reading for more configuration details.
 By default, the node has the Data (KV), Query, Index and Search services enabled. These can be customized. Note: Analytics service requires an enterprise image of Couchbase server. The following example would only have a Data service.
 
 ```typescript
-import { CouchbaseContainer, CouchbaseService } from 'testcontainers-couchbase';
+import {
+    CouchbaseContainer,
+    CouchbaseService,
+} from '@kralphs/testcontainers-couchbase';
 
 const imageName = 'another/couchbase/server/image';
 
@@ -66,7 +69,10 @@ const container = await new CouchbaseContainer(imageName)
 Non-default services can be added without needing to list the default services again
 
 ```typescript
-import { CouchbaseContainer, CouchbaseService } from 'testcontainers-couchbase';
+import {
+    CouchbaseContainer,
+    CouchbaseService,
+} from '@kralphs/testcontainers-couchbase';
 
 const imageName = 'another/couchbase/server/image';
 
@@ -79,7 +85,10 @@ const container = await new CouchbaseContainer(imageName)
 Each service has a minimum memory quota (MB), but this can be customized.
 
 ```typescript
-import { CouchbaseContainer, CouchbaseService } from 'testcontainers-couchbase';
+import {
+    CouchbaseContainer,
+    CouchbaseService,
+} from '@kralphs/testcontainers-couchbase';
 
 const imageName = 'another/couchbase/server/image';
 
@@ -92,7 +101,7 @@ Connect couchbase SDK to the container.
 
 ```typescript
 import couchbase from 'couchbase';
-import { CouchbaseContainer } from 'testcontainers-couchbase';
+import { CouchbaseContainer } from '@kralphs/testcontainers-couchbase';
 
 const imageName = 'another/couchbase/server/image';
 
@@ -107,7 +116,10 @@ const cluster = await couchbase.connect(container.getConnectionString(), {
 Add buckets to the cluster.
 
 ```typescript
-import { CouchbaseContainer, BucketDefinition } from 'testcontainers-couchbase';
+import {
+    CouchbaseContainer,
+    BucketDefinition,
+} from '@kralphs/testcontainers-couchbase';
 
 const bucket = new BucketDefinition('myBucket');
 
@@ -117,7 +129,10 @@ const container = await new CouchbaseContainer().withBucket(bucket).start();
 By default, primary indexes are built at the bucket level i.e. using default scope and collection. This can be disabled to save time.
 
 ```typescript
-import { CouchbaseContainer, BucketDefinition } from 'testcontainers-couchbase';
+import {
+    CouchbaseContainer,
+    BucketDefinition,
+} from '@kralphs/testcontainers-couchbase';
 
 const bucket = new BucketDefinition('myBucket').withPrimaryIndex(false);
 
@@ -127,7 +142,10 @@ const container = await new CouchbaseContainer().withBucket(bucket).start();
 You can also enable bucket flushing and set memory quotas (MB) for the bucket
 
 ```typescript
-import { CouchbaseContainer, BucketDefinition } from 'testcontainers-couchbase';
+import {
+    CouchbaseContainer,
+    BucketDefinition,
+} from '@kralphs/testcontainers-couchbase';
 
 const bucket = new BucketDefinition('myBucket')
     .withFlushEnabled(true)
@@ -139,7 +157,10 @@ const container = await new CouchbaseContainer().withBucket(bucket).start();
 Add scope to a bucket. Scopes have no configuration beyond their name.
 
 ```typescript
-import { CouchbaseContainer, BucketDefinition } from 'testcontainers-couchbase';
+import {
+    CouchbaseContainer,
+    BucketDefinition,
+} from '@kralphs/testcontainers-couchbase';
 
 const scope = new ScopeDefinition('myScope');
 
@@ -151,7 +172,10 @@ const container = await new CouchbaseContainer().withBucket(bucket).start();
 Add collection to a scope. If a scope with that name already exists, its definition will be overwritten.
 
 ```typescript
-import { CouchbaseContainer, BucketDefinition } from 'testcontainers-couchbase';
+import {
+    CouchbaseContainer,
+    BucketDefinition,
+} from '@kralphs/testcontainers-couchbase';
 
 const collection = new CollectionDefinition('myCollection');
 
@@ -165,7 +189,10 @@ const container = await new CouchbaseContainer().withBucket(bucket).start();
 By default, primary indexes are build on a collection. This can be disabled to save time if the query service is not enabled.
 
 ```typescript
-import { CouchbaseContainer, BucketDefinition } from 'testcontainers-couchbase';
+import {
+    CouchbaseContainer,
+    BucketDefinition,
+} from '@kralphs/testcontainers-couchbase';
 
 const collection = new CollectionDefinition('myCollection').withPrimaryIndex(
     false
@@ -181,7 +208,10 @@ const container = await new CouchbaseContainer().withBucket(bucket).start();
 MaxTTL can be set on a collection to provide a maximum TTL. Defaults to 0 i.e. no expiration. See [here](https://docs.couchbase.com/server/current/learn/data/expiration.html#expiration-bucket-versus-item) for more details.
 
 ```typescript
-import { CouchbaseContainer, BucketDefinition } from 'testcontainers-couchbase';
+import {
+    CouchbaseContainer,
+    BucketDefinition,
+} from '@kralphs/testcontainers-couchbase';
 
 const collection = new CollectionDefinition('myCollection').withMaxTTL(60);
 
