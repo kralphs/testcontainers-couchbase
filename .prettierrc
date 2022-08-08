@@ -1,0 +1,14 @@
+{
+    "tabWidth": 4,
+    "useTabs": false,
+    "singleQuote": true,
+    "printWidth": 80,
+    "overrides": [
+        {
+            "files": "*.json *.conf.js CouchbaseFile",
+            "options": {
+                "tabWidth": 2
+            }
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+services:
+    - name: 'KV'
+      quota: 512
+    - name: 'INDEX'
+    - name: 'QUERY'
+buckets:
+    - name: testbucket1
+      withFlushEnabled: true
+      scopes:
+          - name: testScope1
+            collections:
+                - name: testCollection1
+                - name: testCollectionWithoutIndex
+                  hasPrimaryIndex: false
+          - name: testScope2
+            collections:
+                - name: testCollectionWithTTL
+                  maxTTL: 1
+    - name: testBucketWithoutIndex
+      hasPrimaryIndex: false
+    - name: testBucketWithQuota
+      quota: 150

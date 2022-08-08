@@ -1,0 +1,28 @@
+{
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "plugins": ["@typescript-eslint"],
+    "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended",
+        "prettier"
+    ],
+    "env": {
+        "browser": true
+    },
+    "rules": {
+        // Override our default settings just for this directory
+        "arrow-spacing": 2,
+        "eqeqeq": 2,
+        "getter-return": 2,
+        "no-var": 2,
+        "prefer-const": 2,
+        "require-await": 2,
+        "no-tabs": 2,
+        "@typescript-eslint/no-misused-promises": 2,
+        "@typescript-eslint/no-floating-promises": 2
+    },
+    "parserOptions": {
+        "project": ["./tsconfig.eslint.json"]
+      }
+}
