@@ -7,6 +7,12 @@ A port of the Couchbase module for Java Testcontainers adapted to the NodeJS lib
 -   Allows support for declarative YAML file to configure buckets/scopes/collections.
 -   Written using ESM.
 
+##Install
+
+```bash
+npm i -D @kralphs/testcontainers-couchbase
+```
+
 ## Future Work
 
 Plan is to incorporate into official Testcontainers, but self-publishing for now. A few modules from testcontainers-node have been integrated wholesale to give a cohesive experience. Might support secondary indexes, but as this is primarily for use in testing, primary indexes should suffice for any integration testing needed.
