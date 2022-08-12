@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { default as axios, AxiosInstance, AxiosResponse } from 'axios';
-import { default as axiosRetry } from 'axios-retry';
 import { StartedTestContainer } from 'testcontainers';
 import { BucketDefinition } from './bucket-definition.js';
 import { CollectionDefinition } from './collection-definition.js';
@@ -50,12 +49,6 @@ export class CouchbaseConfigurationService {
         private startedContainer: StartedTestContainer
     ) {
         this.#instance = this.getNewInstance();
-        axiosRetry(this.#instance, {
-            retries: 60,
-            retryDelay: () => {
-                return 1000;
-            },
-        });
     }
 
     /**
@@ -80,7 +73,6 @@ export class CouchbaseConfigurationService {
     /**
      * Prepares cluster for data
      */
-    @timePhase
     public async configureCluster(): Promise<void> {
         await this.untilNodeIsOnline();
         await this.initializeIsEnterprise();
@@ -112,17 +104,57 @@ export class CouchbaseConfigurationService {
     /**
      * Before we can start configuring the host, we need to wait until the cluster manager is listening.
      */
-    @timePhase
-    private untilNodeIsOnline(): Promise<void> {
-        return this.#instance.get('/pools');
+    private async untilNodeIsOnline(): Promise<void> {
+        const result = await new IntervalRetryStrategy<
+            AxiosResponse | void,
+            'failed'
+        >(1000).retryUntil(
+            async () => {
+                try {
+                    const response = await this.#instance.get('/pools');
+                    return response;
+                } catch (e) {
+                    log.debug((<Error>e).message);
+                }
+            },
+            (result) => {
+                return result?.status === 200 ? true : false;
+            },
+            () => {
+                return 'failed';
+            },
+            60000
+        );
+        if (result === 'failed') {
+            throw new Error('Timeout waiting for node to be online');
+        }
     }
 
     /**
      * Fetches edition (enterprise or community) of started container.
      */
-    @timePhase
     private async initializeIsEnterprise(): Promise<void> {
-        const response = await this.#instance.get('/pools');
+        const response = await new IntervalRetryStrategy<
+            AxiosResponse,
+            'failed'
+        >(1000).retryUntil(
+            async () => {
+                const response = await this.#instance.get('/pools');
+                return response;
+            },
+            (result) => {
+                return result.status === 200 ? true : false;
+            },
+            () => {
+                return 'failed';
+            },
+            60000
+        );
+        if (response === 'failed') {
+            throw new Error(
+                'Unable to determine whether image is an Enterprise version'
+            );
+        }
         this.container.isEnterprise = response.data.isEnterprise;
 
         if (!this.container.isEnterprise) {
@@ -147,7 +179,6 @@ export class CouchbaseConfigurationService {
      * To make sure the internal hostname is different from the external (alternate) address and the SDK can pick it
      * up automatically, we bind the internal hostname to the internal IP address.
      */
-    @timePhase
     private async renameNode(): Promise<void> {
         const newHost = this.startedContainer.getIpAddress(
             this.startedContainer.getNetworkNames()[0]
@@ -163,7 +194,6 @@ export class CouchbaseConfigurationService {
     /**
      * Initializes services based on the configured enabled services.
      */
-    @timePhase
     private async initializeServices(): Promise<void> {
         const services = Array.from(this.container.enabledServices)
             .map((service) => service.getIdentifier())
@@ -185,7 +215,6 @@ export class CouchbaseConfigurationService {
      * <p>
      * If there is no explicit custom quota defined, the default minimum quota will be used.
      */
-    @timePhase
     private async setMemoryQuotas(): Promise<void> {
         log.debug(
             `Custom service memory quotas: ${this.container.customServiceQuotas}`
@@ -221,7 +250,6 @@ export class CouchbaseConfigurationService {
      * <p>
      * After this.container stage, all subsequent API calls need to have the basic auth header set.
      */
-    @timePhase
     private async configureAdminUser(): Promise<void> {
         log.debug(
             `Configuring couchbase admin user with username: ${this.container.username}`
@@ -246,7 +274,6 @@ export class CouchbaseConfigurationService {
      * hostname and services to align with the mapped ports. The SDK will pick it up and then automatically connect
      * to those ports. Note that for all services non-ssl and ssl ports are configured.
      */
-    @timePhase
     private async configureExternalPorts(): Promise<void> {
         log.debug(
             'Mapping external ports to the alternate address configuration'
@@ -361,7 +388,6 @@ export class CouchbaseConfigurationService {
     /**
      * Configures the indexer service so that indexes can be created later on the bucket.
      */
-    @timePhase
     private async configureIndexer(): Promise<void> {
         log.debug('Configuring the indexer service');
 
@@ -494,7 +520,7 @@ export class CouchbaseConfigurationService {
             // potentially ignore the error, the index will be eventually built.
             if (
                 !(<Error>e).message?.includes(
-                    'Index creation will be retried in background'
+                    'will retry building in the background'
                 )
             ) {
                 throw e;
@@ -696,11 +722,30 @@ export class CouchbaseConfigurationService {
             );
         } catch (e) {
             // potentially ignore the error, the index will be eventually built.
+            if (axios.isAxiosError(e)) {
+                if (
+                    (<any>e.response?.data)?.errors?.[0]?.msg?.includes(
+                        'Index creation will be retried in background'
+                    )
+                ) {
+                    log.debug(
+                        `Index creation for ${
+                            bucket.name
+                        }.${scope.getName()}.${collection.getName()} deferred to the background`
+                    );
+                }
+            }
             if (
-                !(<Error>e).message?.includes(
+                (<Error>e).message?.includes(
                     'Index creation will be retried in background'
                 )
             ) {
+                log.debug(
+                    `Index creation for ${
+                        bucket.name
+                    }.${scope.getName()}.${collection.getName()} deferred to the background`
+                );
+            } else {
                 throw e;
             }
         }
@@ -744,33 +789,4 @@ export class CouchbaseConfigurationService {
             60000
         );
     }
-}
-
-function timePhase(
-    target: unknown,
-    propertyKey: string,
-    descriptor: PropertyDescriptor
-) {
-    return {
-        get() {
-            const wrapperFn = async (...args: unknown[]) => {
-                const start = new Date();
-                await descriptor.value.apply(this, args);
-                const end = new Date();
-                log.debug(
-                    `Phase ${propertyKey}: ${
-                        end.getTime() - start.getTime()
-                    } ms`
-                );
-            };
-
-            Object.defineProperty(this, propertyKey, {
-                value: wrapperFn,
-                configurable: true,
-                writable: true,
-            });
-
-            return wrapperFn;
-        },
-    };
 }
