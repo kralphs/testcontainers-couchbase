@@ -4,10 +4,10 @@ A port of the Couchbase module for Java Testcontainers adapted to the NodeJS lib
 
 -   Provides all functionality from the Java module.
 -   Includes support for scopes and collections.
--   Allows support for declarative YAML file to configure buckets/scopes/collections.
+-   Allows support for declarative YAML file to configure services and buckets/scopes/collections.
 -   Written using ESM.
 
-##Install
+## Install
 
 ```bash
 npm i -D @kralphs/testcontainers-couchbase
@@ -51,7 +51,7 @@ Continue reading for more configuration details.
 
 ### Manual Configuration
 
-By default, the node has the Data (KV), Query, Index and Search services enabled. These can be customized. Note: Analytics service requires an enterprise image of Couchbase server. The following example would only have a Data service.
+By default, the node has the Data (KV), Query, Index and Search services enabled. These can be customized. Note: Analytics and Eventing services requires an enterprise image of Couchbase server. The following example would only have a Data service.
 
 ```typescript
 import {
@@ -186,7 +186,7 @@ const bucket = new BucketDefinition('myBucket').withScope(scope);
 const container = await new CouchbaseContainer().withBucket(bucket).start();
 ```
 
-By default, primary indexes are build on a collection. This can be disabled to save time if the query service is not enabled.
+By default, primary indexes are built on a collection. This can be disabled to save time.
 
 ```typescript
 import {
