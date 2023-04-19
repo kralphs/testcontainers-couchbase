@@ -170,7 +170,7 @@ describe('CouchbaseContainer', () => {
             });
 
             // SDK always returns string instead of boolean
-            it.skip('should configure testbucket1 with flushEnabled', () => {
+            it('should configure testbucket1 with flushEnabled', () => {
                 expect(
                     bucketSettings.find(
                         (bucket) => bucket.name === 'testbucket1'
@@ -179,7 +179,7 @@ describe('CouchbaseContainer', () => {
             });
 
             // SDK always returns undefined instead of number
-            it.skip('should configure testBucketWithQuota to have a quota of 150MB', () => {
+            it('should configure testBucketWithQuota to have a quota of 150MB', () => {
                 expect(
                     bucketSettings.find(
                         (bucket) => bucket.name === 'testBucketWithQuota'
