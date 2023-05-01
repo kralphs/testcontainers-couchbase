@@ -10,8 +10,13 @@ buckets:
           - name: testScope1
             collections:
                 - name: testCollection1
-                - name: testCollectionWithoutIndex
-                  hasPrimaryIndex: false
+                - name: testCollectionWithOnlySecondaryIndex
+                  indexes:
+                      - CREATE INDEX `adv_foo` ON `testbucket1`.`testScope1`.`testCollectionWithOnlySecondaryIndex`(`foo`)
+                - name: testCollectionWithPrimaryAndSecondaryIndex
+                  hasPrimaryIndex: true
+                  indexes:
+                      - CREATE INDEX `adv_foo` ON `testbucket1`.`testScope1`.`testCollectionWithPrimaryAndSecondaryIndex`(`foo`)
           - name: testScope2
             collections:
                 - name: testCollectionWithTTL

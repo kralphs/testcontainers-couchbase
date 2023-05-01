@@ -15,7 +15,11 @@ npm i -D @kralphs/testcontainers-couchbase
 
 ## Future Work
 
-Plan is to incorporate into official Testcontainers, but self-publishing for now. A few modules from testcontainers-node have been integrated wholesale to give a cohesive experience. Might support secondary indexes, but as this is primarily for use in testing, primary indexes should suffice for any integration testing needed.
+Plan is to incorporate into official Testcontainers, but self-publishing for now. A few modules from testcontainers-node have been integrated wholesale to give a cohesive experience; however, these have now been incorporated into the Node testcontainers package so eventually will incorporate that which will be a breaking change as it will require version ^9.1.
+
+May also change secondary index format to support both string (for explicit control of the query) and an object form that the SQL++ expression will be generated from which can allow for deferred builds to speed things up, etc. Basically, eyeing the possibility of a using the CouchbaseFile for CD as well, and don't want to require separate files to be maintained for each.
+
+Looking into automating importing seed data into collections as well. Likely in the form of a folder hierarchy that matches the bucket/scope/collection structure with documents in the default collections and scopes lying in the base bucket folder. JSON file names will be interpreted as the key.
 
 ## Usage
 
@@ -186,7 +190,7 @@ const bucket = new BucketDefinition('myBucket').withScope(scope);
 const container = await new CouchbaseContainer().withBucket(bucket).start();
 ```
 
-By default, primary indexes are built on a collection. This can be disabled to save time.
+By default, primary indexes are built on a collection if no secondary indexes are specified. This can be disabled to save time.
 
 ```typescript
 import {
@@ -214,6 +218,27 @@ import {
 } from '@kralphs/testcontainers-couchbase';
 
 const collection = new CollectionDefinition('myCollection').withMaxTTL(60);
+
+const scope = new ScopeDefinition('myScope').withCollection(collection);
+
+const bucket = new BucketDefinition('myBucket').withScope(scope);
+
+const container = await new CouchbaseContainer().withBucket(bucket).start();
+```
+
+Secondary indexes can be built by providing the SQL++ query
+
+```typescript
+import {
+    CouchbaseContainer,
+    BucketDefinition,
+} from '@kralphs/testcontainers-couchbase';
+
+const query = 'CREATE INDEX advFoo ON myBucket.myScope.myCollection(foo)';
+
+const collection = new CollectionDefinition('myCollection').withSecondaryIndex(
+    query
+);
 
 const scope = new ScopeDefinition('myScope').withCollection(collection);
 

@@ -27,6 +27,7 @@ interface CouchbaseFileSchema {
                 name: string;
                 maxTTL?: number;
                 hasPrimaryIndex?: boolean;
+                indexes?: string[];
             }[];
         }[];
     }[];
@@ -125,11 +126,17 @@ export class CouchbaseContainer extends GenericContainer {
                             newCollection.withMaxTTL(
                                 collection.maxTTL ? collection.maxTTL : 0
                             );
-                            newCollection.withPrimaryIndex(
-                                collection.hasPrimaryIndex === false
-                                    ? false
-                                    : true
-                            );
+                            if (collection.hasPrimaryIndex === false) {
+                                newCollection.withPrimaryIndex(false);
+                            }
+                            if (collection.indexes) {
+                                collection.indexes.forEach((index) =>
+                                    newCollection.withSecondaryIndex(index)
+                                );
+                                if (collection.hasPrimaryIndex !== true) {
+                                    newCollection.withPrimaryIndex(false);
+                                }
+                            }
                             newScope.withCollection(newCollection);
                         });
                     }

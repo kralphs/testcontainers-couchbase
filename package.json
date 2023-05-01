@@ -1,6 +1,6 @@
 {
   "name": "@kralphs/testcontainers-couchbase",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,7 +14,8 @@
     "coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "prepublishOnly": "npm run test",
     "prepare": "npm run build",
-    "build": "tsc"
+    "build": "tsc",
+    "debug": "DEBUG=testcontainers node --inspect=0.0.0.0:9232 --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand  --detectOpenHandles"
   },
   "type": "module",
   "author": "Kevin Ralphs <kevin.b.c.ralphs@gmail.com> (https://github.com/kralphs)",

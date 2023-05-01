@@ -5,6 +5,8 @@ export class CollectionDefinition {
 
     #queryPrimaryIndex = true;
 
+    #secondaryIndexes: string[] = [];
+
     constructor(name: string) {
         this.#name = name;
     }
@@ -29,6 +31,16 @@ export class CollectionDefinition {
         return this;
     }
 
+    /**
+     * Allows creation of secondary indexes for this bucket.
+     *
+     * @param indexDefinition SQL++ statement that creates a secondary index
+     */
+    public withSecondaryIndex(indexDefinition: string): this {
+        this.#secondaryIndexes.push(indexDefinition);
+        return this;
+    }
+
     public getName(): string {
         return this.#name;
     }
@@ -37,7 +49,15 @@ export class CollectionDefinition {
         return this.#maxTTL;
     }
 
+    public getSecondaryIndexes(): string[] {
+        return this.#secondaryIndexes;
+    }
+
     public hasPrimaryIndex(): boolean {
         return this.#queryPrimaryIndex;
+    }
+
+    public hasSecondaryIndexes(): boolean {
+        return this.#secondaryIndexes.length > 0;
     }
 }

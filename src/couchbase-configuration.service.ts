@@ -633,6 +633,31 @@ export class CouchbaseConfigurationService {
                 );
             }
         }
+        if (collection.hasSecondaryIndexes() === true) {
+            if (this.container.enabledServices.has(CouchbaseService.QUERY)) {
+                await Promise.all(
+                    collection
+                        .getSecondaryIndexes()
+                        .map((indexDefinition) =>
+                            this.buildSecondaryIndexForCollection(
+                                bucket,
+                                scope,
+                                collection,
+                                indexDefinition
+                            )
+                        )
+                );
+                await this.waitForCollectionSecondaryIndexesOnline(
+                    bucket,
+                    scope,
+                    collection
+                );
+            } else {
+                log.info(
+                    `Secondary index creation for collection ${collection.getName()} ignored, since QUERY service is not present.`
+                );
+            }
+        }
     }
 
     private async buildCollection(
@@ -724,7 +749,7 @@ export class CouchbaseConfigurationService {
             // potentially ignore the error, the index will be eventually built.
             if (axios.isAxiosError(e)) {
                 if (
-                    (<any>e.response?.data)?.errors?.[0]?.msg?.includes(
+                    e.response?.data?.errors?.[0]?.msg?.includes(
                         'Index creation will be retried in background'
                     )
                 ) {
@@ -784,6 +809,99 @@ export class CouchbaseConfigurationService {
             },
             (result) => {
                 return result.data?.results?.[0]?.online ? true : false;
+            },
+            () => {},
+            60000
+        );
+    }
+
+    private async buildSecondaryIndexForCollection(
+        bucket: BucketDefinition,
+        scope: ScopeDefinition,
+        collection: CollectionDefinition,
+        indexDefinition: string
+    ): Promise<void> {
+        log.debug(
+            `Building secondary index for collection: ${
+                bucket.name
+            }.${scope.getName()}.${collection.getName()}`
+        );
+
+        const body = new URLSearchParams({
+            statement: indexDefinition,
+        });
+        try {
+            await this.getNewInstance('QUERY_PORT').post(
+                '/query/service',
+                body
+            );
+        } catch (e) {
+            // potentially ignore the error, the index will be eventually built.
+            if (axios.isAxiosError(e)) {
+                if (
+                    (<any>e.response?.data)?.errors?.[0]?.msg?.includes(
+                        'Index creation will be retried in background'
+                    )
+                ) {
+                    log.debug(
+                        `Index creation for ${
+                            bucket.name
+                        }.${scope.getName()}.${collection.getName()} deferred to the background`
+                    );
+                }
+            }
+            if (
+                (<Error>e).message?.includes(
+                    'Index creation will be retried in background'
+                )
+            ) {
+                log.debug(
+                    `Index creation for ${
+                        bucket.name
+                    }.${scope.getName()}.${collection.getName()} deferred to the background`
+                );
+            } else {
+                throw e;
+            }
+        }
+    }
+
+    private async waitForCollectionSecondaryIndexesOnline(
+        bucket: BucketDefinition,
+        scope: ScopeDefinition,
+        collection: CollectionDefinition
+    ): Promise<void> {
+        log.debug(
+            `Waiting for secondary indexes to come online for collection: ${
+                bucket.name
+            }.${scope.getName()}.${collection.getName()}`
+        );
+
+        await new IntervalRetryStrategy<AxiosResponse, void>(1000).retryUntil(
+            async () => {
+                const body = new URLSearchParams({
+                    statement: `
+                        SELECT 
+                            state
+                        FROM system:indexes 
+                        WHERE 
+                            bucket_id ="${bucket.name}" AND
+                            scope_id = "${scope.getName()}" AND
+                            keyspace_id = "${collection.getName()}" AND
+                            is_primary IS MISSING`,
+                });
+                const response = await this.getNewInstance('QUERY_PORT').post(
+                    '/query/service',
+                    body
+                );
+                return response;
+            },
+            (result) => {
+                return (<{ state: 'online' | 'offline' }[]>(
+                    result.data?.results
+                ))?.every((result) => result.state === 'online')
+                    ? true
+                    : false;
             },
             () => {},
             60000

@@ -17,7 +17,7 @@ import { ScopeDefinition } from './scope-definition.js';
 const COUCHBASE_IMAGE_COMMUNITY = 'couchbase/server:community-7.1.1';
 
 describe('CouchbaseContainer', () => {
-    jest.setTimeout(240_000);
+    jest.setTimeout(300_000);
     let container: StartedCouchbaseContainer;
     let containerFromFile: StartedCouchbaseContainer;
 
@@ -214,35 +214,6 @@ describe('CouchbaseContainer', () => {
                                 'testBucketWithoutIndex'
                     );
                 expect(bucketsThatNeedThemHavePrimaryIndexes).toEqual(true);
-
-                const collectionsThatNeedThemHavePrimaryIndexes = [
-                    'testCollection1',
-                    'testCollectionWithTTL',
-                ].every((collection) =>
-                    queryIndexesByBucket.some((queryIndexByBucket) =>
-                        queryIndexByBucket.queryIndexes.some(
-                            (queryIndex) =>
-                                queryIndex.isPrimary &&
-                                queryIndex.collectionName === collection
-                        )
-                    )
-                );
-                expect(collectionsThatNeedThemHavePrimaryIndexes).toEqual(true);
-
-                const noPrimaryIndexForTestCollectionWithoutIndex =
-                    queryIndexesByBucket
-                        .flatMap(
-                            (queryIndexByBucket) =>
-                                queryIndexByBucket.queryIndexes
-                        )
-                        .every(
-                            (index) =>
-                                index.collectionName !==
-                                'testCollectionWithoutIndex'
-                        );
-                expect(noPrimaryIndexForTestCollectionWithoutIndex).toEqual(
-                    true
-                );
             });
             describe('scopes', () => {
                 it('should configure scopes properly', async () => {
@@ -292,6 +263,118 @@ describe('CouchbaseContainer', () => {
                     await new Promise((resolve) => setTimeout(resolve, 2000));
                     const exists = (await collection.exists('test')).exists;
                     expect(exists).toEqual(false);
+                });
+                describe('primary indexes', () => {
+                    let queryIndexesByBucket: {
+                        bucket: string;
+                        queryIndexes: couchbase.QueryIndex[];
+                    }[];
+                    beforeAll(async () => {
+                        queryIndexesByBucket = await Promise.all(
+                            bucketSettings
+                                .map((bucket) => bucket.name)
+                                .map(async (bucketName) => {
+                                    return {
+                                        bucket: bucketName,
+                                        queryIndexes: await cluster
+                                            .queryIndexes()
+                                            .getAllIndexes(bucketName),
+                                    };
+                                })
+                        );
+                    });
+                    it('should create by default', () => {
+                        const collectionsThatNeedThemHavePrimaryIndexes = [
+                            'testCollection1',
+                        ].every((collection) =>
+                            queryIndexesByBucket.some((queryIndexByBucket) =>
+                                queryIndexByBucket.queryIndexes.some(
+                                    (queryIndex) =>
+                                        queryIndex.isPrimary &&
+                                        queryIndex.collectionName === collection
+                                )
+                            )
+                        );
+                        expect(
+                            collectionsThatNeedThemHavePrimaryIndexes
+                        ).toEqual(true);
+                    });
+                    it('should not create by default when a secondary index is present', () => {
+                        const collectionsThatNeedThemHavePrimaryIndexes = [
+                            'testCollection1',
+                            'testCollectionWithTTL',
+                        ].every((collection) =>
+                            queryIndexesByBucket.some((queryIndexByBucket) =>
+                                queryIndexByBucket.queryIndexes.some(
+                                    (queryIndex) =>
+                                        queryIndex.isPrimary &&
+                                        queryIndex.collectionName === collection
+                                )
+                            )
+                        );
+                        expect(
+                            collectionsThatNeedThemHavePrimaryIndexes
+                        ).toEqual(true);
+
+                        const noPrimaryIndexForTestCollectionWithoutIndex =
+                            queryIndexesByBucket
+                                .flatMap(
+                                    (queryIndexByBucket) =>
+                                        queryIndexByBucket.queryIndexes
+                                )
+                                .filter((queryIndex) => queryIndex.isPrimary)
+                                .every(
+                                    (index) =>
+                                        index.collectionName !==
+                                        'testCollectionWithoutIndex'
+                                );
+                        expect(
+                            noPrimaryIndexForTestCollectionWithoutIndex
+                        ).toEqual(true);
+                    });
+                });
+
+                it('should configure secondary indexes', async () => {
+                    const secondaryIndexes = (
+                        await Promise.all(
+                            bucketSettings
+                                .map((bucket) => bucket.name)
+                                .map(async (bucketName) => {
+                                    return await cluster
+                                        .queryIndexes()
+                                        .getAllIndexes(bucketName);
+                                })
+                        )
+                    )
+                        .flat()
+                        .filter((queryIndex) => !queryIndex.isPrimary);
+
+                    expect(secondaryIndexes.length).toEqual(1);
+
+                    const buckets = secondaryIndexes.map(
+                        (queryIndex) => queryIndex.bucketName
+                    );
+
+                    expect(buckets).toContain('testbucket1');
+                    expect(
+                        secondaryIndexes.filter(
+                            (item) => item.bucketName === 'testbucket1'
+                        )[0].collectionName
+                    ).toEqual('testCollectionWithoutIndex');
+                });
+                it('should query on secondary index', async () => {
+                    const collection = cluster
+                        .bucket('testbucket1')
+                        .scope('testScope1')
+                        .collection('testCollectionWithoutIndex');
+                    await collection.upsert('test1', { foo: 1 });
+                    await collection.upsert('test2', { foo: 2 });
+                    const result = await cluster.query(
+                        'SELECT foo FROM testbucket1.testScope1.testCollectionWithoutIndex WHERE foo = 1',
+                        { scanConsistency: QueryScanConsistency.RequestPlus }
+                    );
+                    expect(result.rows.length).toEqual(1);
+                    expect(result.rows[0].foo).toEqual(1);
                 });
             });
         });
