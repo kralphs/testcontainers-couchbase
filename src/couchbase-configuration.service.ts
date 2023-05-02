@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { default as axios, AxiosInstance, AxiosResponse } from 'axios';
+import {
+    default as axios,
+    AxiosInstance,
+    AxiosResponse,
+    isAxiosError,
+} from 'axios';
 import { StartedTestContainer } from 'testcontainers';
 import { BucketDefinition } from './bucket-definition.js';
 import { CollectionDefinition } from './collection-definition.js';
@@ -206,7 +211,12 @@ export class CouchbaseConfigurationService {
         try {
             await this.#instance.post('/node/controller/setupServices', body);
         } catch (e) {
-            throw new Error('Could not enable couchbase services');
+            const message = isAxiosError(e)
+                ? Array.isArray(e.response?.data)
+                    ? e.response?.data.join('\n')
+                    : e.response?.data
+                : (<any>e).message ?? '';
+            throw new Error(`Could not enable couchbase services:\n${message}`);
         }
     }
 
@@ -241,7 +251,14 @@ export class CouchbaseConfigurationService {
         try {
             await this.#instance.post('/pools/default', quotas);
         } catch (e) {
-            throw new Error('Could not configure service memory quotas');
+            const message = isAxiosError(e)
+                ? Array.isArray(e.response?.data)
+                    ? e.response?.data.join('\n')
+                    : e.response?.data
+                : (<any>e).message ?? '';
+            throw new Error(
+                `Could not configure service memory quotas:\n${message}`
+            );
         }
     }
 
@@ -263,7 +280,14 @@ export class CouchbaseConfigurationService {
         try {
             await this.#instance.post('/settings/web', body);
         } catch (e) {
-            throw new Error('Could not configure couchbase admin user');
+            const message = isAxiosError(e)
+                ? Array.isArray(e.response?.data)
+                    ? e.response?.data.join('\n')
+                    : e.response?.data
+                : (<any>e).message ?? '';
+            throw new Error(
+                `Could not configure couchbase admin user:\n${message}`
+            );
         }
     }
 
@@ -381,7 +405,12 @@ export class CouchbaseConfigurationService {
                 body
             );
         } catch (e) {
-            throw new Error('Could not configure external ports');
+            const message = isAxiosError(e)
+                ? Array.isArray(e.response?.data)
+                    ? e.response?.data.join('\n')
+                    : e.response?.data
+                : (<any>e).message ?? '';
+            throw new Error(`Could not configure external ports\n${message}`);
         }
     }
 
@@ -399,7 +428,14 @@ export class CouchbaseConfigurationService {
         try {
             await this.#instance.post('/settings/indexes', body);
         } catch (e) {
-            throw new Error('Could not configure the indexing service');
+            const message = isAxiosError(e)
+                ? Array.isArray(e.response?.data)
+                    ? e.response?.data.join('\n')
+                    : e.response?.data
+                : (<any>e).message ?? '';
+            throw new Error(
+                `Could not configure the indexing service:\n${message}`
+            );
         }
     }
 
@@ -437,7 +473,14 @@ export class CouchbaseConfigurationService {
         try {
             await this.#instance.post('/pools/default/buckets', body);
         } catch (e) {
-            throw new Error(`Could not create bucket ${bucket.name}`);
+            const message = isAxiosError(e)
+                ? Array.isArray(e.response?.data)
+                    ? e.response?.data.join('\n')
+                    : e.response?.data
+                : (<any>e).message ?? '';
+            throw new Error(
+                `Could not create bucket ${bucket.name}:\n${message}`
+            );
         }
     }
 
@@ -586,7 +629,14 @@ export class CouchbaseConfigurationService {
                 body
             );
         } catch (e) {
-            throw new Error(`Could not create scope ${scope.getName()}`);
+            const message = isAxiosError(e)
+                ? Array.isArray(e.response?.data)
+                    ? e.response?.data.join('\n')
+                    : e.response?.data
+                : (<any>e).message ?? '';
+            throw new Error(
+                `Could not create scope ${scope.getName()}:\n${message}`
+            );
         }
     }
 
@@ -680,10 +730,15 @@ export class CouchbaseConfigurationService {
                 body
             );
         } catch (e) {
+            const message = isAxiosError(e)
+                ? Array.isArray(e.response?.data)
+                    ? e.response?.data.join('\n')
+                    : e.response?.data
+                : (<any>e).message ?? '';
             throw new Error(
                 `Could not create collection ${
                     bucket.name
-                }:${collection.getName()}:${collection.getName()}`
+                }:${collection.getName()}:${collection.getName()}:\n${message}`
             );
         }
     }
