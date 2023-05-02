@@ -17,6 +17,8 @@ buckets:
                   hasPrimaryIndex: true
                   indexes:
                       - CREATE INDEX `adv_foo` ON `testbucket1`.`testScope1`.`testCollectionWithPrimaryAndSecondaryIndex`(`foo`)
+                - name: testCollectionWithNoIndexes
+                  hasPrimaryIndex: false
           - name: testScope2
             collections:
                 - name: testCollectionWithTTL

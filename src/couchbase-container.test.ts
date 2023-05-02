@@ -299,23 +299,7 @@ describe('CouchbaseContainer', () => {
                             collectionsThatNeedThemHavePrimaryIndexes
                         ).toEqual(true);
                     });
-                    it('should not create by default when a secondary index is present', () => {
-                        const collectionsThatNeedThemHavePrimaryIndexes = [
-                            'testCollection1',
-                            'testCollectionWithTTL',
-                        ].every((collection) =>
-                            queryIndexesByBucket.some((queryIndexByBucket) =>
-                                queryIndexByBucket.queryIndexes.some(
-                                    (queryIndex) =>
-                                        queryIndex.isPrimary &&
-                                        queryIndex.collectionName === collection
-                                )
-                            )
-                        );
-                        expect(
-                            collectionsThatNeedThemHavePrimaryIndexes
-                        ).toEqual(true);
-
+                    it('should not create when hasPrimaryIndex is false', () => {
                         const noPrimaryIndexForTestCollectionWithoutIndex =
                             queryIndexesByBucket
                                 .flatMap(
@@ -326,7 +310,24 @@ describe('CouchbaseContainer', () => {
                                 .every(
                                     (index) =>
                                         index.collectionName !==
-                                        'testCollectionWithoutIndex'
+                                        'testCollectionWithNoIndexes'
+                                );
+                        expect(
+                            noPrimaryIndexForTestCollectionWithoutIndex
+                        ).toEqual(true);
+                    });
+                    it('should not create by default when a secondary index is present', () => {
+                        const noPrimaryIndexForTestCollectionWithoutIndex =
+                            queryIndexesByBucket
+                                .flatMap(
+                                    (queryIndexByBucket) =>
+                                        queryIndexByBucket.queryIndexes
+                                )
+                                .filter((queryIndex) => queryIndex.isPrimary)
+                                .every(
+                                    (index) =>
+                                        index.collectionName !==
+                                        'testCollectionWithOnlySecondaryIndex'
                                 );
                         expect(
                             noPrimaryIndexForTestCollectionWithoutIndex
@@ -349,28 +350,27 @@ describe('CouchbaseContainer', () => {
                         .flat()
                         .filter((queryIndex) => !queryIndex.isPrimary);
 
-                    expect(secondaryIndexes.length).toEqual(1);
+                    const collections = secondaryIndexes
+                        .filter((item) => item.bucketName === 'testbucket1')
+                        .map((item) => item.collectionName);
 
-                    const buckets = secondaryIndexes.map(
-                        (queryIndex) => queryIndex.bucketName
+                    expect(collections.length).toEqual(2);
+                    expect(collections).toContain(
+                        'testCollectionWithOnlySecondaryIndex'
                     );
-
-                    expect(buckets).toContain('testbucket1');
-                    expect(
-                        secondaryIndexes.filter(
-                            (item) => item.bucketName === 'testbucket1'
-                        )[0].collectionName
-                    ).toEqual('testCollectionWithoutIndex');
+                    expect(collections).toContain(
+                        'testCollectionWithPrimaryAndSecondaryIndex'
+                    );
                 });
                 it('should query on secondary index', async () => {
                     const collection = cluster
                         .bucket('testbucket1')
                         .scope('testScope1')
-                        .collection('testCollectionWithoutIndex');
+                        .collection('testCollectionWithOnlySecondaryIndex');
                     await collection.upsert('test1', { foo: 1 });
                     await collection.upsert('test2', { foo: 2 });
                     const result = await cluster.query(
-                        'SELECT foo FROM testbucket1.testScope1.testCollectionWithoutIndex WHERE foo = 1',
+                        'SELECT foo FROM testbucket1.testScope1.testCollectionWithOnlySecondaryIndex WHERE foo = 1',
                         { scanConsistency: QueryScanConsistency.RequestPlus }
                     );
                     expect(result.rows.length).toEqual(1);
