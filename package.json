@@ -10,12 +10,13 @@
   "scripts": {
     "prestart": "npm run build",
     "start": "node .",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles",
+    "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js  --ci",
     "coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
-    "prepublishOnly": "npm run test",
+    "prepublishOnly": "npm run test:ci",
     "prepare": "npm run build",
     "build": "tsc",
-    "debug": "DEBUG=testcontainers node --inspect=0.0.0.0:9232 --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand  --detectOpenHandles"
+    "debug": "DEBUG=testcontainers node --inspect=0.0.0.0:9232 --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles"
   },
   "type": "module",
   "author": "Kevin Ralphs <kevin.b.c.ralphs@gmail.com> (https://github.com/kralphs)",
