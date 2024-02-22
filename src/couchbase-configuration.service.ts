@@ -193,7 +193,33 @@ export class CouchbaseConfigurationService {
         const body = new URLSearchParams({
             hostname: newHost,
         });
-        await this.#instance.post('/node/controller/rename', body);
+        const result = await new IntervalRetryStrategy<
+            AxiosResponse | void,
+            'failed'
+        >(1000).retryUntil(
+            async () => {
+                try {
+                    const response = await this.#instance.post(
+                        '/node/controller/rename',
+                        body
+                    );
+
+                    return response;
+                } catch (e) {
+                    log.debug((<Error>e).message);
+                }
+            },
+            (result) => {
+                return result?.status === 200 ? true : false;
+            },
+            () => {
+                return 'failed';
+            },
+            60000
+        );
+        if (result === 'failed') {
+            throw new Error('Could not rename Couchbase node');
+        }
     }
 
     /**
@@ -208,15 +234,32 @@ export class CouchbaseConfigurationService {
         const body = new URLSearchParams({
             services,
         });
-        try {
-            await this.#instance.post('/node/controller/setupServices', body);
-        } catch (e) {
-            const message = isAxiosError(e)
-                ? Array.isArray(e.response?.data)
-                    ? e.response?.data.join('\n')
-                    : e.response?.data
-                : (<any>e).message ?? '';
-            throw new Error(`Could not enable couchbase services:\n${message}`);
+        const result = await new IntervalRetryStrategy<
+            AxiosResponse | void,
+            'failed'
+        >(1000).retryUntil(
+            async () => {
+                try {
+                    const response = await this.#instance.post(
+                        '/node/controller/setupServices',
+                        body
+                    );
+
+                    return response;
+                } catch (e) {
+                    log.debug((<Error>e).message);
+                }
+            },
+            (result) => {
+                return result?.status === 200 ? true : false;
+            },
+            () => {
+                return 'failed';
+            },
+            60000
+        );
+        if (result === 'failed') {
+            throw new Error(`Could not enable couchbase services`);
         }
     }
 
@@ -399,18 +442,31 @@ export class CouchbaseConfigurationService {
             );
         }
 
-        try {
-            await this.#instance.put(
-                '/node/controller/setupAlternateAddresses/external',
-                body
-            );
-        } catch (e) {
-            const message = isAxiosError(e)
-                ? Array.isArray(e.response?.data)
-                    ? e.response?.data.join('\n')
-                    : e.response?.data
-                : (<any>e).message ?? '';
-            throw new Error(`Could not configure external ports\n${message}`);
+        const result = await new IntervalRetryStrategy<
+            AxiosResponse | undefined,
+            string
+        >(1000).retryUntil(
+            async () => {
+                try {
+                    const response = await this.#instance.put(
+                        '/node/controller/setupAlternateAddresses/external',
+                        body
+                    );
+                    return response;
+                } catch (e) {
+                    log.debug((<Error>e).message);
+                }
+            },
+            (result) => {
+                return result?.status === 200 ? true : false;
+            },
+            () => {
+                return 'failed';
+            },
+            60000
+        );
+        if (result === 'failed') {
+            throw new Error('Could not configure external ports');
         }
     }
 
